@@ -1,0 +1,13 @@
+{
+  "host": "192.168.1.100",
+  "port": 2101,
+  "bridge_exe": "C:\\path\\to\\bridge.exe",
+  "destinations": [
+    {
+      "ip": "127.0.0.1",
+      "port": 7000,
+      "template": "/captury/{actor}/{joint}",
+      "enabled": true
+    }
+  ]
+}

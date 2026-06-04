@@ -1,0 +1,103 @@
+name: Build Desktop Distributions
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bridge_src: build/bridge/Release/bridge.exe
+            bridge_dest: captury-ui/bridge.exe
+            artifact: captury-ui-windows-x64
+          - os: macos-latest
+            bridge_src: build/bridge/bridge
+            bridge_dest: captury-ui/bridge
+            artifact: captury-ui-macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout captury-ui
+        uses: actions/checkout@v4
+        with:
+          path: captury-ui
+
+      - name: Checkout RemoteCaptury
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/RemoteCaptury
+          path: RemoteCaptury
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install Python dependencies
+        run: pip install "PySide6>=6.6" "python-osc>=1.8" pyinstaller
+        working-directory: captury-ui
+
+      - name: Build bridge (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
+          cmake --build build --target bridge --config Release
+          Copy-Item ${{ matrix.bridge_src }} ../${{ matrix.bridge_dest }}
+        working-directory: RemoteCaptury
+
+      - name: Build bridge (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -S .
+          cmake --build build --target bridge --config Release
+          cp ${{ matrix.bridge_src }} ../${{ matrix.bridge_dest }}
+        working-directory: RemoteCaptury
+
+      - name: Build with PyInstaller
+        run: pyinstaller captury.spec --clean --noconfirm
+        working-directory: captury-ui
+
+      - name: Archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path dist\captury-ui -DestinationPath ..\${{ matrix.artifact }}.zip
+        working-directory: captury-ui
+
+      - name: Archive (macOS)
+        if: runner.os == 'macOS'
+        run: cd dist && zip -r ../../${{ matrix.artifact }}.zip captury-ui/
+        working-directory: captury-ui
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: "*.zip"
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.zip"
+          generate_release_notes: true
