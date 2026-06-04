@@ -71,6 +71,11 @@ jobs:
         run: Compress-Archive -Path dist\captury-ui -DestinationPath ..\${{ matrix.artifact }}.zip
         working-directory: captury-ui
 
+      - name: Sign ad-hoc (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --deep --force --sign - dist/captury-ui
+        working-directory: captury-ui
+
       - name: Archive (macOS)
         if: runner.os == 'macOS'
         run: cd dist && zip -r ../../${{ matrix.artifact }}.zip captury-ui/
