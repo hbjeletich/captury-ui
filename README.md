@@ -11,15 +11,6 @@ python main.py
 
 Copy `config.example.json` to `config.json` and fill in your Captury Live host IP and the path to `bridge.exe`.
 
-## Building a distribution
-
-Tag a commit to trigger the GitHub Actions workflow, which builds Windows and macOS bundles via PyInstaller:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
 ## macOS: Gatekeeper warning
 
 The app is ad-hoc signed but not notarized, so macOS may still block it on first launch. To clear the quarantine flag on the entire bundle at once:
